@@ -6,7 +6,6 @@ import os
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Setup logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -33,7 +32,7 @@ def get_page(tags, api_key, per_page, sort, page=1):
         "sort": sort,
         "content_types": "0",  # Defaults to photos
         "media": "photos",
-        "page": page,  # Add page number to the parameters
+        "page": page,
     }
 
     response = requests.get(base_url, params=params)
@@ -48,11 +47,9 @@ def save_photo_info(output_folder, photo_info, size, format):
     json_filepath = os.path.join(output_folder, f"{photo_info['id']}.json")
     image_filepath = os.path.join(output_folder, f"{photo_info['id']}.{format}")
 
-    # Save the photo information in JSON format
     with open(json_filepath, "w") as file:
         json.dump(photo_info, file)
 
-    # Download and save the image
     response = requests.get(photo_info["url"])
     if response.status_code == 200:
         with open(image_filepath, "wb") as file:
@@ -68,15 +65,20 @@ def fetch_all_pages(tags, api_key, per_page, sort, max_pages):
         logging.error("Failed to fetch the first page.")
         return None
 
-    total_pages = min(first_page["photos"]["pages"], max_pages)
+    total_pages = first_page["photos"]["pages"]
+    if max_pages == -1:
+        max_pages = total_pages
+    else:
+        max_pages = min(total_pages, max_pages)
+
     all_pages.append(first_page)
 
     with ThreadPoolExecutor() as executor, tqdm(
-        total=total_pages, desc="Fetching pages"
+        total=max_pages, desc="Fetching pages"
     ) as pbar:
         futures = [
             executor.submit(get_page, tags, api_key, per_page, sort, page_number)
-            for page_number in range(2, total_pages + 1)
+            for page_number in range(2, max_pages + 1)
         ]
         for future in as_completed(futures):
             page_data = future.result()
@@ -87,7 +89,9 @@ def fetch_all_pages(tags, api_key, per_page, sort, max_pages):
     return all_pages
 
 
-def main(tags, output_folder, num_cores, per_page, sort, max_pages, size, format):
+def main(
+    tags, output_folder, num_cores, per_page, sort, max_pages, size, format, no_download
+):
     api_key = load_api_key("FLICKR_API_KEY")
     if not api_key:
         logging.error("API key is required to proceed.")
@@ -96,6 +100,12 @@ def main(tags, output_folder, num_cores, per_page, sort, max_pages, size, format
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
+    if num_cores == -1:
+        num_cores = os.cpu_count()
+        logging.info(f"Using all available cores: {num_cores}")
+    else:
+        logging.info(f"Using {num_cores} cores")
+
     logging.info("Fetching all pages...")
     all_pages = fetch_all_pages(tags, api_key, per_page, sort, max_pages)
 
@@ -103,6 +113,10 @@ def main(tags, output_folder, num_cores, per_page, sort, max_pages, size, format
         # Save all pages data to session.json
         with open(f"{output_folder}/session.json", "w") as file:
             json.dump(all_pages, file)
+
+        if no_download:
+            logging.info("No download flag is set. Skipping image downloads.")
+            return
 
         # Extract all photos from all pages
         all_photos = [photo for page in all_pages for photo in page["photos"]["photo"]]
@@ -151,7 +165,7 @@ if __name__ == "__main__":
         "--cores",
         type=int,
         default=16,
-        help="Number of cores to use for parallel processing",
+        help="Number of cores to use for parallel processing (-1 to use all available cores)",
     )
     parser.add_argument(
         "--per_page",
@@ -169,7 +183,7 @@ if __name__ == "__main__":
         "--max_pages",
         type=int,
         default=10,
-        help="Maximum number of pages to fetch",
+        help="Maximum number of pages to fetch (-1 to fetch all available pages)",
     )
     parser.add_argument(
         "--size",
@@ -183,6 +197,11 @@ if __name__ == "__main__":
         default="png",
         help="Format of the images (e.g., jpg, png)",
     )
+    parser.add_argument(
+        "--no_download",
+        action="store_true",
+        help="Fetch the session data without downloading the images",
+    )
     args = parser.parse_args()
     main(
         args.tags,
@@ -193,4 +212,5 @@ if __name__ == "__main__":
         args.max_pages,
         args.size,
         args.format,
+        args.no_download,
     )
