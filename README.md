@@ -1,7 +1,7 @@
 <h1>Flickr Scrapper Ultra</h1>
 <p>Based on <a href="https://github.com/ultralytics/flickr_scraper">flickr_scrapper</a></p>
 
-<p>This script fetches photos from Flickr based on specified tags and scaves the photo information and images to a local directory.</p>
+<p>This script fetches photos from Flickr based on specified tags and saves the photo information and images to a local directory.</p>
 <h2>Features</h2>
 <ul>
 <li>Fetch photos from Flickr using specified tags.</li>
@@ -32,20 +32,21 @@ cd flickr_scraper_ultra</code></pre>
 </ol>
 <h2>Usage</h2>
 <p>Run the script with the following command:</p>
-<pre><code>python main.py &lt;tags&gt; [--output OUTPUT] [--cores CORES] [--per_page PER_PAGE] [--sort SORT] [--max_pages MAX_PAGES] [--size SIZE] [--format FORMAT]</code></pre>
+<pre><code>python main.py &lt;tags&gt; [--output OUTPUT] [--cores CORES] [--per_page PER_PAGE] [--sort SORT] [--max_pages MAX_PAGES] [--size SIZE] [--format FORMAT] [--no_download]</code></pre>
 <h3>Arguments</h3>
 <ul>
 <li><code>tags</code> (required): Tags to search for photos.</li>
 <li><code>--output</code> (optional): Output folder for saving photo information (default: <code>output</code>).</li>
-<li><code>--cores</code> (optional): Number of cores to use for parallel processing (default: <code>16</code>).</li>
+<li><code>--cores</code> (optional): Number of cores to use for parallel processing (default: <code>16</code>, <code>-1</code> to use all available cores).</li>
 <li><code>--per_page</code> (optional): Number of photos per page (min 5, max 500, default: <code>500</code>).</li>
 <li><code>--sort</code> (optional): Sort order of the photos (default: <code>relevance</code>).</li>
-<li><code>--max_pages</code> (optional): Maximum number of pages to fetch (default: <code>10</code>).</li>
+<li><code>--max_pages</code> (optional): Maximum number of pages to fetch (default: <code>10</code>, <code>-1</code> to fetch all available pages).</li>
 <li><code>--size</code> (optional): Size suffix for the images (e.g., <code>s</code>, <code>q</code>, <code>t</code>, <code>m</code>, <code>n</code>, <code>w</code>, <code>z</code>, <code>c</code>, <code>b</code>, <code>h</code>, <code>k</code>, <code>3k</code>, <code>4k</code>, <code>f</code>, <code>5k</code>, <code>6k</code>, <code>o</code>, default: <code>b</code>).</li>
 <li><code>--format</code> (optional): Format of the images (e.g., <code>jpg</code>, <code>png</code>, default: <code>png</code>).</li>
+<li><code>--no_download</code> (optional): Fetch the session data without downloading the images.</li>
 </ul>
 <h3>Example</h3>
-<pre><code>python main.py "nature,landscape" --output my_photos --cores 8 --per_page 100 --sort interestingness-desc --max_pages 5 --size m --format jpg</code></pre>
-<p>This command will fetch photos tagged with "nature" and "landscape", save the information and images in the <code>my_photos</code> directory, use 8 cores for parallel processing, fetch 100 photos per page, sort by interestingness in descending order, fetch up to 5 pages, and save images in medium size and JPG format.</p>
+<pre><code>python main.py "nature,landscape" --output my_photos --cores 8 --per_page 100 --sort interestingness-desc --max_pages 5 --size m --format jpg --no_download</code></pre>
+<p>This command will fetch photos tagged with "nature" and "landscape", save the information and images in the <code>my_photos</code> directory, use 8 cores for parallel processing, fetch 100 photos per page, sort by interestingness in descending order, fetch up to 5 pages, save images in medium size and JPG format, and skip downloading the images.</p>
 <h2>License</h2>
 <p>This project is licensed under the MIT License.</p>
