@@ -1,13 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flickr Photo Fetcher</title>
-</head>
-<body>
-<h1>Flickr Photo Fetcher</h1>
-<p>This script fetches photos from Flickr based on specified tags and saves the photo information and images to a local directory.</p>
+<h1>Flickr Scrapper Ultra</h1>
+<p>Based on <a href="https://github.com/ultralytics/flickr_scraper">flickr_scrapper</a></p>
+
+<p>This script fetches photos from Flickr based on specified tags and scaves the photo information and images to a local directory.</p>
 <h2>Features</h2>
 <ul>
 <li>Fetch photos from Flickr using specified tags.</li>
@@ -28,8 +22,8 @@
 <h2>Installation</h2>
 <ol>
 <li>Clone the repository:
-<pre><code>git clone https://github.com/yourusername/flickr-photo-fetcher.git
-cd flickr-photo-fetcher</code></pre>
+<pre><code>git clone https://github.com/arcanite24/flickr_scraper_ultra.git
+cd flickr_scraper_ultra</code></pre>
 </li>
 <li>Install the required packages:
 <pre><code>pip install -r requirements.txt</code></pre>
@@ -55,5 +49,3 @@ cd flickr-photo-fetcher</code></pre>
 <p>This command will fetch photos tagged with "nature" and "landscape", save the information and images in the <code>my_photos</code> directory, use 8 cores for parallel processing, fetch 100 photos per page, sort by interestingness in descending order, fetch up to 5 pages, and save images in medium size and JPG format.</p>
 <h2>License</h2>
 <p>This project is licensed under the MIT License.</p>
-</body>
-</html>
