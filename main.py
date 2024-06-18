@@ -43,19 +43,25 @@ def get_page(tags, api_key, per_page, sort, page=1):
         return None
 
 
-def save_photo_info(output_folder, photo_info, size, format):
+def save_photo_info(output_folder, photo_info, size, format, failed_downloads):
     json_filepath = os.path.join(output_folder, f"{photo_info['id']}.json")
     image_filepath = os.path.join(output_folder, f"{photo_info['id']}.{format}")
 
     with open(json_filepath, "w") as file:
         json.dump(photo_info, file)
 
-    response = requests.get(photo_info["url"])
-    if response.status_code == 200:
-        with open(image_filepath, "wb") as file:
-            file.write(response.content)
-    else:
-        logging.error(f"Failed to download image {photo_info['url']}")
+    try:
+        response = requests.get(photo_info["url"], timeout=10)
+        if response.status_code == 200:
+            with open(image_filepath, "wb") as file:
+                file.write(response.content)
+        else:
+            raise Exception(f"Failed to download image {photo_info['url']}")
+    except Exception as e:
+        logging.error(e)
+        failed_downloads.append(photo_info)
+        with open(os.path.join(output_folder, "failed_downloads.json"), "w") as file:
+            json.dump(failed_downloads, file)
 
 
 def fetch_all_pages(tags, api_key, per_page, sort, max_pages):
@@ -90,30 +96,47 @@ def fetch_all_pages(tags, api_key, per_page, sort, max_pages):
 
 
 def main(
-    tags, output_folder, num_cores, per_page, sort, max_pages, size, format, no_download
+    tags,
+    output_folder,
+    num_cores,
+    per_page,
+    sort,
+    max_pages,
+    size,
+    format,
+    no_download,
+    session_file,
 ):
-    api_key = load_api_key("FLICKR_API_KEY")
-    if not api_key:
-        logging.error("API key is required to proceed.")
-        return
+    failed_downloads = []
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    if num_cores == -1:
-        num_cores = os.cpu_count()
-        logging.info(f"Using all available cores: {num_cores}")
+    if session_file:
+        logging.info(f"Loading session data from {session_file}")
+        with open(session_file, "r") as file:
+            all_pages = json.load(file)
     else:
-        logging.info(f"Using {num_cores} cores")
+        api_key = load_api_key("FLICKR_API_KEY")
+        if not api_key:
+            logging.error("API key is required to proceed.")
+            return
 
-    logging.info("Fetching all pages...")
-    all_pages = fetch_all_pages(tags, api_key, per_page, sort, max_pages)
+        if num_cores == -1:
+            num_cores = os.cpu_count()
+            logging.info(f"Using all available cores: {num_cores}")
+        else:
+            logging.info(f"Using {num_cores} cores")
+
+        logging.info("Fetching all pages...")
+        all_pages = fetch_all_pages(tags, api_key, per_page, sort, max_pages)
+
+        if all_pages:
+            # Save all pages data to session.json
+            with open(f"{output_folder}/session.json", "w") as file:
+                json.dump(all_pages, file)
 
     if all_pages:
-        # Save all pages data to session.json
-        with open(f"{output_folder}/session.json", "w") as file:
-            json.dump(all_pages, file)
-
         if no_download:
             logging.info("No download flag is set. Skipping image downloads.")
             return
@@ -142,7 +165,12 @@ def main(
                 photo_info = {"title": title, "url": photo_url, "id": photo_id}
                 futures.append(
                     executor.submit(
-                        save_photo_info, output_folder, photo_info, size, format
+                        save_photo_info,
+                        output_folder,
+                        photo_info,
+                        size,
+                        format,
+                        failed_downloads,
                     )
                 )
             for future in futures:
@@ -177,32 +205,39 @@ if __name__ == "__main__":
         "--sort",
         type=str,
         default="relevance",
-        help="Sort order of the photos",
+        help="Sort order (e.g., date-posted-asc, date-taken-asc, interestingness-desc)",
     )
     parser.add_argument(
         "--max_pages",
         type=int,
-        default=10,
-        help="Maximum number of pages to fetch (-1 to fetch all available pages)",
+        default=-1,
+        help="Maximum number of pages to fetch (-1 for all pages)",
     )
     parser.add_argument(
         "--size",
         type=str,
         default="b",
-        help="Size suffix for the images (e.g., s, q, t, m, n, w, z, c, b, h, k, 3k, 4k, f, 5k, 6k, o)",
+        help="Size suffix for the photo (e.g., s, q, t, m, n, z, c, b, h, k, o)",
     )
     parser.add_argument(
         "--format",
         type=str,
-        default="png",
-        help="Format of the images (e.g., jpg, png)",
+        default="jpg",
+        help="Image format (e.g., jpg, png)",
     )
     parser.add_argument(
         "--no_download",
         action="store_true",
-        help="Fetch the session data without downloading the images",
+        help="If set, only fetch metadata without downloading images",
     )
+    parser.add_argument(
+        "--session_file",
+        type=str,
+        help="Path to a session file to resume from",
+    )
+
     args = parser.parse_args()
+
     main(
         args.tags,
         args.output,
@@ -213,4 +248,7 @@ if __name__ == "__main__":
         args.size,
         args.format,
         args.no_download,
+        args.session_file,
     )
+
+# python main.py portrait --output flickr_portraits --size b --cores 8 --session_file flickr_portraits_full_v1_partial\session.json
